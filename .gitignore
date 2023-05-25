@@ -6,7 +6,6 @@ RailroadTrainMonitor/Backups
 RailroadTrainMonitor/ClassAnnotations.csv
 RailroadTrainMonitor/TrainedModel.pth
 RailroadTrainMonitor/.idea
-RailroadTrainMonitor/DataSetTrainer.py
 
 OpenImagesDownloadScripts/class-descriptions.csv
 OpenImagesDownloadScripts/Downloader.py

@@ -16,7 +16,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from PIL import Image
 from torchvision import transforms
-from TrainDataSetTrainer import MyModel
+from DataSetTrainer import MyModel
 
 
 print("Initializing...")
@@ -89,4 +89,4 @@ while True:
     image.save(f'{screenshot_dir}/{timestamp}.png')
 
     train_present = analyze_screenshot(image)
-    time.sleep(300)
+    time.sleep(60)
