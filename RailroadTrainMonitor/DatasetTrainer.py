@@ -62,6 +62,20 @@ class MyModel(nn.Module):
 
 # Need to adjust these?
 if __name__ == "__main__":
+
+    def get_accuracy(model, data_loader):
+        correct = 0
+        total = 0
+        with torch.no_grad():
+            for data in data_loader:
+                images, labels = data
+                outputs = model(images)
+                _, predicted = torch.max(outputs.data, 1)
+                total += labels.size(0)
+                correct += (predicted == labels).sum().item()
+        return 100 * correct / total
+
+
     data_transforms = transforms.Compose([
         transforms.Resize(256),
         transforms.CenterCrop(224),
@@ -77,6 +91,13 @@ if __name__ == "__main__":
     num_classes = train_dataset.get_num_classes()
     model = MyModel(num_classes=num_classes)
     train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
+    
+    val_dataset = MyDataset(
+        image_dir='TestImages',
+        annotation_file='TestAnnotations.csv',
+        transform=data_transforms)
+    val_loader = DataLoader(val_dataset, batch_size=4, shuffle=True)
+    
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9) # Need to adjust these?
     num_epochs = 10
@@ -91,8 +112,10 @@ if __name__ == "__main__":
             optimizer.step()
             running_loss += loss.item()
             if i % 2000 == 1999:
-                print(f'[{epoch + 1}, {i + 1}] loss: {running_loss / 2000:.3f}')
+                train_acc = get_accuracy(model, train_loader)
+                val_acc = get_accuracy(model, val_loader)
+                print(f'[{epoch + 1}, {i + 1}] loss: {running_loss / 2000:.3f} train acc: {train_acc:.2f}% val acc: {val_acc:.2f}%')
                 running_loss = 0.0
 
-    torch.save(model.state_dict(), 'TrainedModel.pth')
+    torch.save(model.state_dict(), 'TrainedModel2.pth')
     print('Finished Training!')

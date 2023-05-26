@@ -1,13 +1,26 @@
 RailroadTrainMonitor/TestImages
 RailroadTrainMonitor/TrainImages
+RailroadTrainMonitor/TrainImagesCurated
+RailroadTrainMonitor/TrainImagesNegative
 RailroadTrainMonitor/Screenshots
 RailroadTrainMonitor/__pycache__
 RailroadTrainMonitor/Backups
 RailroadTrainMonitor/ClassAnnotations.csv
+RailroadTrainMonitor/NegativeSimilarClassAnnotations.csv
 RailroadTrainMonitor/TrainedModel.pth
 RailroadTrainMonitor/.idea
+RailroadTrainMonitor/ImageListTrain.txt
+RailroadTrainMonitor/ImageListTest.txt
+RailroadTrainMonitor/ImageListTrainNegative.txt
+RailroadTrainMonitor/TestAnnotations.csv
 
 OpenImagesDownloadScripts/class-descriptions.csv
 OpenImagesDownloadScripts/Downloader.py
 OpenImagesDownloadScripts/oidv6-train-annotations-bbox.csv
 OpenImagesDownloadScripts/test-annotations-bbox.csv
+OpenImagesDownloadScripts/TestImages
+OpenImagesDownloadScripts/TrainImages
+OpenImagesDownloadScripts/TrainImagesNegative
+OpenImagesDownloadScripts/ImageListTrain.txt
+OpenImagesDownloadScripts/ImageListTest.txt
+OpenImagesDownloadScripts/ImageListTrainNegative.txt

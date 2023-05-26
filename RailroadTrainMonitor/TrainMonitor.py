@@ -26,6 +26,8 @@ options.add_argument("--window-size=1920x1080")
 chrome_driver_path = os.getcwd() + "/chromedriver"
 service = Service(chrome_driver_path)
 driver = webdriver.Chrome(service=service, options=options)
+driver.set_page_load_timeout(30)
+driver.implicitly_wait(10)
 
 # URL for the live train camera feed. This is Jefferson Parish, LA - Central Ave. 
 url = "https://g1.ipcamlive.com/player/player.php?alias=63609c3400e64&autoplay=1" 
@@ -55,8 +57,10 @@ def analyze_screenshot(screenshot):
     screenshot = screenshot.unsqueeze(0)
     with torch.no_grad():
         output = model(screenshot)
+        print(f'Raw model output: {output}')
         presence_prediction = torch.argmax(output, dim=1)
-    if presence_prediction.item() == 1: # Adjust this?
+        probability = output[0][presence_prediction].item()
+    if presence_prediction.item() == 1:
         print("Match! Train being logged...")
         date = datetime.now().strftime("%Y-%m-%d")
         current_time = datetime.now().strftime("%H:%M:%S")
@@ -67,10 +71,10 @@ def analyze_screenshot(screenshot):
         # Need to add something here to log the color of the train
 
         log_train_data(date, current_time, length) # Add color too
-        return True
+        return True, probability
     
     print("Not a match. Moving on...")
-    return False
+    return False, probability
 
 def log_train_data(date, current_time, length):
     print("Logging Train Data...")
@@ -83,10 +87,20 @@ while True:
     time.sleep(5)
     screenshot = driver.get_screenshot_as_png()
     image = Image.open(io.BytesIO(screenshot))
-    
-    # Comment out two lines below to not save screenshots
+    open_cv_image = np.array(image.convert('RGB'))
+    open_cv_image = cv2.cvtColor(open_cv_image, cv2.COLOR_RGB2BGR)
+    train_present, probability = analyze_screenshot(image)
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 2.5
+    text = f'Probability: {probability * 100:.2f}%'
+    (text_width, text_height) = cv2.getTextSize(text, font, fontScale=font_scale, thickness=2)[0]
+    text_offset_x = 10
+    text_offset_y = open_cv_image.shape[0] - 10
+    box_coords = ((text_offset_x, text_offset_y), (text_offset_x + text_width + 10, text_offset_y - text_height - 10))
+    cv2.rectangle(open_cv_image, box_coords[0], box_coords[1], (255, 255, 255), cv2.FILLED)
+    cv2.putText(open_cv_image, text, (text_offset_x + 5, text_offset_y - 5), font, font_scale, (0, 0, 0), 2)
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    image.save(f'{screenshot_dir}/{timestamp}.png')
+    cv2.imwrite(f'{screenshot_dir}/{timestamp}.png', open_cv_image)
 
-    train_present = analyze_screenshot(image)
     time.sleep(60)
+
