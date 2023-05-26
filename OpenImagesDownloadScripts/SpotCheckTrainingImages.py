@@ -6,9 +6,37 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import random
 import os
+import pandas as pd
 from torchvision import transforms
-from DataSetTrainer import MyDataset
+from torch.utils.data import Dataset
 from PIL import Image
+
+class MyDataset(Dataset):
+    def __init__(self, image_dir, annotation_file, transform=None):
+        self.image_dir = image_dir
+        self.transform = transform
+        self.annotations = pd.read_csv(annotation_file)
+        self.label_map = {label: index for index, label in enumerate(self.annotations['LabelName'].unique())}
+
+    def __len__(self):
+        return len(self.annotations)
+
+    def __getitem__(self, idx):
+        image_id = self.annotations.iloc[idx, 0]
+        label_name = self.annotations.iloc[idx, 2]
+        class_index = self.label_map[label_name]
+        image_path = os.path.join(self.image_dir, f'{image_id}.jpg')
+        try:
+            image = Image.open(image_path).convert('RGB')
+            if self.transform:
+                image = self.transform(image)
+            return image, class_index
+        except FileNotFoundError:
+            print(f"File not found: {image_path}")
+            return torch.zeros(3, 224, 224), 0
+
+    def get_num_classes(self):
+        return len(self.label_map)
 
 def display_random_images(dataset, num_images=5):
     num_data = len(dataset)
@@ -66,7 +94,7 @@ data_transforms = transforms.Compose([
 	transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 dataset = MyDataset(
-	image_dir='TrainImagesNegative',
-	annotation_file='NegativeSimilarClassAnnotations.csv',
+	image_dir='TrainingImagesNegative',
+	annotation_file='TrainingAnnotationsNegative.csv',
 	transform=data_transforms)
 display_random_images(dataset)

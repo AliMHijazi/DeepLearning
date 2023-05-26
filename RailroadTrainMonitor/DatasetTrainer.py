@@ -13,10 +13,16 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 class MyDataset(Dataset):
-    def __init__(self, image_dir, annotation_file, transform=None):
+    def __init__(self, image_dir, annotation_file, transform=None, negative_annotation_file=None):
         self.image_dir = image_dir
         self.transform = transform
         self.annotations = pd.read_csv(annotation_file)
+        if negative_annotation_file:
+            negative_annotations = pd.read_csv(negative_annotation_file)
+            # Set the label for the negative examples
+            negative_annotations['LabelName'] = 'Negative'
+            # Concatenate the positive and negative annotations
+            self.annotations = pd.concat([self.annotations, negative_annotations], ignore_index=True)
         self.label_map = {label: index for index, label in enumerate(self.annotations['LabelName'].unique())}
 
     def __len__(self):
@@ -84,17 +90,18 @@ if __name__ == "__main__":
     ])
 
     train_dataset = MyDataset(
-        image_dir='TrainImages',
-        annotation_file='ClassAnnotations.csv',
-        transform=data_transforms)
+        image_dir='TrainingImages',
+        annotation_file='TrainingAnnotations.csv',
+        transform=data_transforms,
+        negative_annotation_file='TrainingAnnotationsNegative.csv')
 
     num_classes = train_dataset.get_num_classes()
     model = MyModel(num_classes=num_classes)
     train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
     
     val_dataset = MyDataset(
-        image_dir='TestImages',
-        annotation_file='TestAnnotations.csv',
+        image_dir='TestingImages',
+        annotation_file='TestingAnnotations.csv',
         transform=data_transforms)
     val_loader = DataLoader(val_dataset, batch_size=4, shuffle=True)
     

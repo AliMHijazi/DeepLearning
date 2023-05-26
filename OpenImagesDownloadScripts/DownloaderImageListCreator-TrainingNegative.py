@@ -33,7 +33,7 @@ with open(csv_file, newline='') as f:
 # Convert image_ids to a list and randomly select num_samples image ids
 image_ids = random.sample(list(image_ids), num_samples)
 
-output_file = 'ImageListTrainNegative.txt'
+output_file = 'ImageListTrainingNegative.txt'
 if os.path.exists(output_file):
     overwrite = input(f'{output_file} already exists. Do you want to overwrite it? (y/n): ')
     if overwrite.lower() != 'y':

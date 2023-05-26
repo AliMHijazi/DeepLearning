@@ -13,7 +13,7 @@ class_label = '/m/07jdr' # Railroad Trains
 with open(csv_file, newline='') as f:
     reader = csv.reader(f)
     header = next(reader)
-    with open('TestAnnotations.csv', 'w', newline='') as out:
+    with open('TestingAnnotations.csv', 'w', newline='') as out:
         writer = csv.writer(out)
         writer.writerow(header)
         for row in reader:

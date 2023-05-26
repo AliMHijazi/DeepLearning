@@ -18,6 +18,6 @@ with open(csv_file, newline='') as f:
         image_id, label = row[0], row[2]
         if label == class_label:
             image_ids.add(image_id)
-with open('ImageListTest.txt', 'w') as f:
+with open('ImageListTesting.txt', 'w') as f:
     for image_id in image_ids:
         f.write(f'test/{image_id}\n')
