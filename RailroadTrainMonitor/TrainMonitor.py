@@ -16,7 +16,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from PIL import Image
 from torchvision import transforms
-from DataSetTrainer import MyModel
+from DatasetTrainer import MyModel
 
 
 print("Initializing...")
@@ -36,7 +36,7 @@ screenshot_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Scree
 if not os.path.exists(screenshot_dir):
     os.makedirs(screenshot_dir)
 
-model = MyModel(num_classes=1)
+model = MyModel(num_classes=2)
 model.load_state_dict(torch.load('TrainedModel.pth'))
 model.eval()
 
@@ -58,8 +58,9 @@ def analyze_screenshot(screenshot):
     with torch.no_grad():
         output = model(screenshot)
         print(f'Raw model output: {output}')
-        presence_prediction = torch.argmax(output, dim=1)
-        probability = output[0][presence_prediction].item()
+        probabilities = torch.softmax(output, dim=1)
+        presence_prediction = torch.argmax(probabilities, dim=1)
+        probability = probabilities[0][presence_prediction].item()
     if presence_prediction.item() == 1:
         print("Match! Train being logged...")
         date = datetime.now().strftime("%Y-%m-%d")
@@ -80,7 +81,7 @@ def log_train_data(date, current_time, length):
     print("Logging Train Data...")
     with open("TrainData.csv", "a") as f:
         writer = csv.writer(f)
-        writer.writerow([date, current_time, color, length])
+        writer.writerow([date, current_time, length])
 
 while True:
     driver.get(url)

@@ -8,12 +8,14 @@ RailroadTrainMonitor/__pycache__
 RailroadTrainMonitor/Backups
 RailroadTrainMonitor/TrainingAnnotations.csv
 RailroadTrainMonitor/TrainingAnnotationsNegative.csv
+RailroadTrainMonitor/TrainingAnnotationsCurated.csv
 RailroadTrainMonitor/TrainedModel.pth
 RailroadTrainMonitor/.idea
 RailroadTrainMonitor/ImageListTraining.txt
 RailroadTrainMonitor/ImageListTesting.txt
 RailroadTrainMonitor/ImageListTrainingNegative.txt
 RailroadTrainMonitor/TestingAnnotations.csv
+RailroadTrainMonitor/TrainData.csv
 
 OpenImagesDownloadScripts/class-descriptions.csv
 OpenImagesDownloadScripts/Downloader.py

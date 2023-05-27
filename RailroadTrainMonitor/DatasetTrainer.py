@@ -13,8 +13,9 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 class MyDataset(Dataset):
-    def __init__(self, image_dir, annotation_file, transform=None, negative_annotation_file=None):
+    def __init__(self, image_dir, annotation_file, transform=None, negative_image_dir=None, negative_annotation_file=None):
         self.image_dir = image_dir
+        self.negative_image_dir = negative_image_dir or image_dir
         self.transform = transform
         self.annotations = pd.read_csv(annotation_file)
         if negative_annotation_file:
@@ -32,7 +33,12 @@ class MyDataset(Dataset):
         image_id = self.annotations.iloc[idx, 0]
         label_name = self.annotations.iloc[idx, 2]
         class_index = self.label_map[label_name]
-        image_path = os.path.join(self.image_dir, f'{image_id}.jpg')
+        # Use the negative image directory for negative examples
+        if label_name == 'Negative':
+            image_dir = self.negative_image_dir
+        else:
+            image_dir = self.image_dir
+        image_path = os.path.join(image_dir, f'{image_id}.jpg')
         try:
             image = Image.open(image_path).convert('RGB')
             if self.transform:
@@ -44,6 +50,7 @@ class MyDataset(Dataset):
 
     def get_num_classes(self):
         return len(self.label_map)
+
 
 class MyModel(nn.Module):
     def __init__(self, num_classes=10):
@@ -81,7 +88,6 @@ if __name__ == "__main__":
                 correct += (predicted == labels).sum().item()
         return 100 * correct / total
 
-
     data_transforms = transforms.Compose([
         transforms.Resize(256),
         transforms.CenterCrop(224),
@@ -91,8 +97,9 @@ if __name__ == "__main__":
 
     train_dataset = MyDataset(
         image_dir='TrainingImages',
-        annotation_file='TrainingAnnotations.csv',
+        annotation_file='TrainingAnnotationsCurated.csv',
         transform=data_transforms,
+        negative_image_dir='TrainingImagesNegative',
         negative_annotation_file='TrainingAnnotationsNegative.csv')
 
     num_classes = train_dataset.get_num_classes()
