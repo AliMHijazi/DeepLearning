@@ -2,6 +2,7 @@
 # Needs a bit of tweaking for sure. 
 
 import torch
+import time
 from torch.utils.data import Dataset
 from PIL import Image
 from torch.utils.data import DataLoader
@@ -13,9 +14,10 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 class MyDataset(Dataset):
-    def __init__(self, image_dir, annotation_file, transform=None, negative_image_dir=None, negative_annotation_file=None):
+    def __init__(self, image_dir, annotation_file, transform=None, negative_image_dir=None, negative_annotation_file=None, negative_image_ext='.jpg'):
         self.image_dir = image_dir
         self.negative_image_dir = negative_image_dir or image_dir
+        self.negative_image_ext = negative_image_ext
         self.transform = transform
         self.annotations = pd.read_csv(annotation_file)
         if negative_annotation_file:
@@ -33,12 +35,14 @@ class MyDataset(Dataset):
         image_id = self.annotations.iloc[idx, 0]
         label_name = self.annotations.iloc[idx, 2]
         class_index = self.label_map[label_name]
-        # Use the negative image directory for negative examples
+        # Use the negative image directory and file extension for negative examples
         if label_name == 'Negative':
             image_dir = self.negative_image_dir
+            image_ext = self.negative_image_ext
         else:
             image_dir = self.image_dir
-        image_path = os.path.join(image_dir, f'{image_id}.jpg')
+            image_ext = '.jpg'
+        image_path = os.path.join(image_dir, f'{image_id}{image_ext}')
         try:
             image = Image.open(image_path).convert('RGB')
             if self.transform:
@@ -75,7 +79,7 @@ class MyModel(nn.Module):
 
 # Need to adjust these?
 if __name__ == "__main__":
-
+    start_time = time.time()
     def get_accuracy(model, data_loader):
         correct = 0
         total = 0
@@ -95,27 +99,38 @@ if __name__ == "__main__":
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
+    print('Loading training data')
     train_dataset = MyDataset(
         image_dir='TrainingImages',
         annotation_file='TrainingAnnotationsCurated.csv',
         transform=data_transforms,
         negative_image_dir='TrainingImagesNegative',
-        negative_annotation_file='TrainingAnnotationsNegative.csv')
+        negative_annotation_file='TrainingAnnotationsNegative.csv',
+        negative_image_ext='.jpg')
+    print(f"Elapsed time: {time.time() - start_time:.2f} seconds")
 
     num_classes = train_dataset.get_num_classes()
     model = MyModel(num_classes=num_classes)
-    train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
     
+    # Batch size increased from 4 to 8 - Added num_workers=2 to speed up process
+    train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True, num_workers=2) 
+
+    print('Loading validation data')
     val_dataset = MyDataset(
         image_dir='TestingImages',
         annotation_file='TestingAnnotations.csv',
         transform=data_transforms)
-    val_loader = DataLoader(val_dataset, batch_size=4, shuffle=True)
-    
+        
+    # Batch size increased from 4 to 8 - Added num_workers=2 to speed up process
+    val_loader = DataLoader(val_dataset, batch_size=8, shuffle=True, num_workers=2) 
+
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9) # Need to adjust these?
+    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+
+    print('Starting training')
     num_epochs = 10
     for epoch in range(num_epochs):
+        epoch_start_time = time.time()
         running_loss = 0.0
         for i, data in enumerate(train_loader):
             inputs, labels = data
@@ -130,6 +145,8 @@ if __name__ == "__main__":
                 val_acc = get_accuracy(model, val_loader)
                 print(f'[{epoch + 1}, {i + 1}] loss: {running_loss / 2000:.3f} train acc: {train_acc:.2f}% val acc: {val_acc:.2f}%')
                 running_loss = 0.0
+        print(f"Epoch {epoch + 1} completed in {time.time() - epoch_start_time:.2f} seconds")
 
     torch.save(model.state_dict(), 'TrainedModel2.pth')
-    print('Finished Training!')
+    print('Finished training')
+    print(f"Total training time: {time.time() - start_time:.2f} seconds")

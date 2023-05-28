@@ -3,6 +3,7 @@ RailroadTrainMonitor/TrainingImages
 RailroadTrainMonitor/TrainingImagesCurated
 RailroadTrainMonitor/TrainingImagesFull
 RailroadTrainMonitor/TrainingImagesNegative
+RailroadTrainMonitor/TrainingImagesNegativeUnannotated
 RailroadTrainMonitor/Screenshots
 RailroadTrainMonitor/__pycache__
 RailroadTrainMonitor/Backups
@@ -16,6 +17,7 @@ RailroadTrainMonitor/ImageListTesting.txt
 RailroadTrainMonitor/ImageListTrainingNegative.txt
 RailroadTrainMonitor/TestingAnnotations.csv
 RailroadTrainMonitor/TrainData.csv
+
 
 OpenImagesDownloadScripts/class-descriptions.csv
 OpenImagesDownloadScripts/Downloader.py
