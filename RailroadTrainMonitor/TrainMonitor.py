@@ -26,7 +26,7 @@ options.add_argument("--window-size=1920x1080")
 chrome_driver_path = os.getcwd() + "/chromedriver"
 service = Service(chrome_driver_path)
 driver = webdriver.Chrome(service=service, options=options)
-driver.set_page_load_timeout(30)
+driver.set_page_load_timeout(60) # Increase if timeout continues to occur.
 driver.implicitly_wait(10)
 
 # URL for the live train camera feed. This is Jefferson Parish, LA - Central Ave. 
@@ -57,10 +57,13 @@ def analyze_screenshot(screenshot):
     screenshot = screenshot.unsqueeze(0)
     with torch.no_grad():
         output = model(screenshot)
-        print(f'Raw model output: {output}')
         probabilities = torch.softmax(output, dim=1)
         presence_prediction = torch.argmax(probabilities, dim=1)
         probability = probabilities[0][presence_prediction].item()
+        print(f'Raw model output: {output}')
+        print(f'Probabilities: {probabilities}')
+        print(f'Predicted class: {presence_prediction.item()}')
+        print(f'Probability: {probability * 100:.2f}%')
     if presence_prediction.item() == 1:
         print("Match! Train being logged...")
         date = datetime.now().strftime("%Y-%m-%d")
@@ -97,11 +100,11 @@ while True:
     (text_width, text_height) = cv2.getTextSize(text, font, fontScale=font_scale, thickness=2)[0]
     text_offset_x = 10
     text_offset_y = open_cv_image.shape[0] - 10
-    box_coords = ((text_offset_x, text_offset_y), (text_offset_x + text_width + 10, text_offset_y - text_height - 10))
-    cv2.rectangle(open_cv_image, box_coords[0], box_coords[1], (255, 255, 255), cv2.FILLED)
-    cv2.putText(open_cv_image, text, (text_offset_x + 5, text_offset_y - 5), font, font_scale, (0, 0, 0), 2)
+#    box_coords = ((text_offset_x, text_offset_y), (text_offset_x + text_width + 10, text_offset_y - text_height - 10))
+#    cv2.rectangle(open_cv_image, box_coords[0], box_coords[1], (255, 255, 255), cv2.FILLED)
+#    cv2.putText(open_cv_image, text, (text_offset_x + 5, text_offset_y - 5), font, font_scale, (0, 0, 0), 2)
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    cv2.imwrite(f'{screenshot_dir}/{timestamp}.png', open_cv_image)
+    cv2.imwrite(f'{screenshot_dir}/{timestamp}.jpg', open_cv_image)
 
     time.sleep(60)
 
