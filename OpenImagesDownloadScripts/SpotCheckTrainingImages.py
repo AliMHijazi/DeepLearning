@@ -61,32 +61,41 @@ def display_random_images(dataset, num_images=5):
         
         axs[i].set_title(f'Label: {label_name}')
         axs[i].axis('off')
-        annotations = dataset.annotations[dataset.annotations.iloc[:, 0] == image_id]
-        for _, row in annotations.iterrows():
-            xmin = row['XMin'] * width
-            xmax = row['XMax'] * width
-            ymin = row['YMin'] * height
-            ymax = row['YMax'] * height
-            new_width, new_height = resized_image.size
-            xmin = int(xmin * new_width / width)
-            xmax = int(xmax * new_width / width)
-            ymin = int(ymin * new_height / height)
-            ymax = int(ymax * new_height / height)
+        
+        if 'XMin' in dataset.annotations.columns:
+            annotations = dataset.annotations[dataset.annotations.iloc[:, 0] == image_id]
+            for _, row in annotations.iterrows():
+                xmin = row['XMin']
+                xmax = row['XMax']
+                ymin = row['YMin']
+                ymax = row['YMax']
+                
+                if not any(pd.isna([xmin, xmax, ymin, ymax])):
+                    xmin *= width
+                    xmax *= width
+                    ymin *= height
+                    ymax *= height
+                    new_width, new_height = resized_image.size
+                    xmin = int(xmin * new_width / width)
+                    xmax = int(xmax * new_width / width)
+                    ymin = int(ymin * new_height / height)
+                    ymax = int(ymax * new_height / height)
 
-            rect = patches.Rectangle((xmin,ymin),xmax-xmin,
-                                     ymax-ymin,
-                                     linewidth=1,
-                                     edgecolor='lime',
-                                     facecolor='none')
+                    rect = patches.Rectangle((xmin,ymin),xmax-xmin,
+                                             ymax-ymin,
+                                             linewidth=1,
+                                             edgecolor='lime',
+                                             facecolor='none')
 
-            axs[i].add_patch(rect)
-            axs[i].text(xmin,
-                        ymin,
-                        row[2],
-                        fontsize=8,
-                        color='white',
-                        bbox=dict(facecolor='red', alpha=0.5))
+                    axs[i].add_patch(rect)
+                    axs[i].text(xmin,
+                                ymin,
+                                row[2],
+                                fontsize=8,
+                                color='white',
+                                bbox=dict(facecolor='red', alpha=0.5))
     plt.show()
+
 
 
 data_transforms = transforms.Compose([
@@ -94,7 +103,7 @@ data_transforms = transforms.Compose([
 	transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 dataset = MyDataset(
-	image_dir='TrainingImagesNegative',
-	annotation_file='TrainingAnnotationsNegative.csv',
+	image_dir='TrainingImages',
+	annotation_file='TrainingAnnotations.csv',
 	transform=data_transforms)
 display_random_images(dataset)

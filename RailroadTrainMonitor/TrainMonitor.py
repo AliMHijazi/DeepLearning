@@ -26,7 +26,7 @@ options.add_argument("--window-size=1920x1080")
 chrome_driver_path = os.getcwd() + "/chromedriver"
 service = Service(chrome_driver_path)
 driver = webdriver.Chrome(service=service, options=options)
-driver.set_page_load_timeout(60) # Increase if timeout continues to occur.
+driver.set_page_load_timeout(240) # Increase if timeout continues to occur.
 driver.implicitly_wait(10)
 
 # URL for the live train camera feed. This is Jefferson Parish, LA - Central Ave. 
@@ -64,7 +64,7 @@ def analyze_screenshot(screenshot):
         print(f'Probabilities: {probabilities}')
         print(f'Predicted class: {presence_prediction.item()}')
         print(f'Probability: {probability * 100:.2f}%')
-    if presence_prediction.item() == 1:
+    if presence_prediction.item() == 0:
         print("Match! Train being logged...")
         date = datetime.now().strftime("%Y-%m-%d")
         current_time = datetime.now().strftime("%H:%M:%S")

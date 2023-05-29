@@ -102,12 +102,13 @@ if __name__ == "__main__":
     print('Loading training data')
     train_dataset = MyDataset(
         image_dir='TrainingImages',
-        annotation_file='TrainingAnnotationsCurated.csv',
+        annotation_file='TrainingAnnotations.csv',
         transform=data_transforms,
         negative_image_dir='TrainingImagesNegative',
         negative_annotation_file='TrainingAnnotationsNegative.csv',
         negative_image_ext='.jpg')
     print(f"Elapsed time: {time.time() - start_time:.2f} seconds")
+    print(train_dataset.label_map)
 
     num_classes = train_dataset.get_num_classes()
     model = MyModel(num_classes=num_classes)
@@ -129,6 +130,7 @@ if __name__ == "__main__":
 
     print('Starting training')
     num_epochs = 10
+
     for epoch in range(num_epochs):
         epoch_start_time = time.time()
         running_loss = 0.0
@@ -140,12 +142,12 @@ if __name__ == "__main__":
             loss.backward()
             optimizer.step()
             running_loss += loss.item()
-            if i % 2000 == 1999:
-                train_acc = get_accuracy(model, train_loader)
-                val_acc = get_accuracy(model, val_loader)
-                print(f'[{epoch + 1}, {i + 1}] loss: {running_loss / 2000:.3f} train acc: {train_acc:.2f}% val acc: {val_acc:.2f}%')
-                running_loss = 0.0
+
+        train_acc = get_accuracy(model, train_loader)
+        val_acc = get_accuracy(model, val_loader)
+        print(f'[{epoch + 1}] loss: {running_loss / len(train_loader):.3f} train acc: {train_acc:.2f}% val acc: {val_acc:.2f}%')
         print(f"Epoch {epoch + 1} completed in {time.time() - epoch_start_time:.2f} seconds")
+
 
     torch.save(model.state_dict(), 'TrainedModel2.pth')
     print('Finished training')
