@@ -17,7 +17,8 @@ RailroadTrainMonitor/ImageListTesting.txt
 RailroadTrainMonitor/ImageListTrainingNegative.txt
 RailroadTrainMonitor/TestingAnnotations.csv
 RailroadTrainMonitor/TrainData.csv
-
+RailroadTrainMonitor/TrainingScreenshots
+RailroadTrainMonitor/TrainingScreenshotsNegative
 
 OpenImagesDownloadScripts/class-descriptions.csv
 OpenImagesDownloadScripts/Downloader.py
