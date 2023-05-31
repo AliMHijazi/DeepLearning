@@ -23,27 +23,11 @@ from DatasetTrainer import MyModel
 
 
 print("Initializing...")
-# One of these is required to prevent timeout, not sure which one though.
+# Options required to prevent timeout, not sure why though.
 options = Options()
 options.add_argument('--headless')
 options.add_argument('--window-size=1920x1080')
 options.add_argument('--disable-gpu')
-"""options.add_argument("--disable-browser-side-navigation")
-options.add_argument("--no-sandbox")
-options.add_argument("--disable-extensions")
-options.add_argument("--dns-prefetch-disable")
-options.add_argument("--disable-dev-shm-usage")
-options.add_argument("--aggressive-cache-discard")
-options.add_argument("--disable-cache")
-options.add_argument("--disable-application-cache")
-options.add_argument("--disable-offline-load-stale-cache")
-options.add_argument("--disk-cache-size=0")
-options.add_argument("--no-proxy-server")
-options.add_argument("--ignore-certificate-errors")
-options.add_argument("--disable-notifications")
-options.add_argument("--mute-audio")
-options.add_argument("--enable-automation")
-options.add_argument("--disable-features=NetworkService")"""
 chrome_driver_path = os.getcwd() + "/chromedriver"
 service = Service(chrome_driver_path)
 driver = webdriver.Chrome(service=service, options=options)
@@ -72,7 +56,7 @@ transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize(
         mean=[0.485, 0.456, 0.406],
-        std=[0.229, 0.224, 0.225] # Adjust this?
+        std=[0.229, 0.224, 0.225]
     )
 ])
 
@@ -86,34 +70,39 @@ def analyze_screenshot(screenshot, filename):
         probabilities = torch.softmax(output, dim=1)
         presence_prediction = torch.argmax(probabilities, dim=1)
         probability = probabilities[0][presence_prediction].item()
-        print(f'Raw model output: {output}')
-        print(f'Probabilities: Class 0: {probabilities[0][0] * 100:.2f}%, Class 1: {probabilities[0][1] * 100:.2f}%')
-        print(f'Predicted class: {presence_prediction.item()}')
-        print(f'Probability: {probability * 100:.2f}%')
+        # print(f'Raw model output: {output}')
+        # print(f'Probabilities: Class 0: {probabilities[0][0] * 100:.2f}%, Class 1: {probabilities[0][1] * 100:.2f}%')
+        if presence_prediction.item() == 0:
+            print(f'Train Present - Probability of Prediction: {probability * 100:.2f}%')
+        else:
+            print(f'Train Not Present - Probability of Prediction: {probability * 100:.2f}%')
+        # print(f'Probability: {probability * 100:.2f}%')
     if presence_prediction.item() == 0:
         print("Match! Train being logged...")
         date = datetime.now().strftime("%Y-%m-%d")
         current_time = datetime.now().strftime("%H:%M:%S")
-        
-        # Need to add something here to log the length of time of the train
-        length = 10 
-        
-        # Need to add something here to log the color of the train
+        length = 0
 
-        log_train_data(date, current_time, length) # Add color too
+#        log_train_data(date, current_time, length)
         return True, probability
     
     print("Not a match. Moving on...")
     return False, probability
 
+
 def log_train_data(date, current_time, length):
     print("Logging Train Data...")
-    with open("TrainData.csv", "a") as f:
+    filename = "TrainData.csv"
+    header = ["Date", "Time", "Length of Time Logged"]
+    file_exists = os.path.isfile(filename)
+    with open(filename, "a") as f:
         writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow(header)
         writer.writerow([date, current_time, length])
         
-window_x = 150
-window_y = 100
+window_x = 1500
+window_y = 700
 root = tk.Tk()
 root.geometry(f'+{window_x}+{window_y}')
 label = tk.Label(root)
@@ -123,6 +112,9 @@ def update_image(image):
     photo = ImageTk.PhotoImage(image)
     label.config(image=photo)
     label.image = photo
+    
+train_start_time = None
+train_logged = False
 
 while True:
     driver.get(url)
@@ -137,8 +129,23 @@ while True:
     
     if train_present:
         cv2.imwrite(f'{positive_screenshot_dir}/{timestamp}.jpg', open_cv_image)
+        if train_start_time is None:
+            train_start_time = datetime.now()
+            if not train_logged:
+                date = train_start_time.strftime("%Y-%m-%d")
+                current_time = train_start_time.strftime("%H:%M:%S")
+                log_train_data(date, current_time, 'NA()')
+                train_logged = True
     else:
         cv2.imwrite(f'{negative_screenshot_dir}/{timestamp}.jpg', open_cv_image)
+        if train_start_time is not None:
+            train_end_time = datetime.now()
+            train_duration = (train_end_time - train_start_time).total_seconds()
+            date = train_start_time.strftime("%Y-%m-%d")
+            current_time = train_end_time.strftime("%H:%M:%S")
+            log_train_data(date, current_time, train_duration)
+            train_start_time = None
+            train_logged = False
 
     font = cv2.FONT_HERSHEY_SIMPLEX
     font_scale = 2.5
@@ -157,7 +164,6 @@ while True:
     new_height = int(new_width * aspect_ratio)
     image = image.resize((new_width, new_height))
     update_image(image)
-    #label.place(x=500, y=100)
     root.update_idletasks()
     root.update()
     time.sleep(60)
