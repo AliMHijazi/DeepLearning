@@ -3,10 +3,11 @@
 # This currently creates a folder for screenshots and saves them based on its prediction about whether a  
 # train is present in the image. Set to take a screenshot every 1 minute. 
 
+import os
+import smtplib
 import time
 import torch
 import io
-import os
 import cv2
 import csv
 import numpy as np
@@ -21,9 +22,10 @@ from PIL import ImageTk
 from torchvision import transforms
 from DatasetTrainer import MyModel
 
-
 print("Initializing...")
-# Options required to prevent timeout, not sure why though.
+screenshot_frequency = 60 # Seconds between screenshots.
+
+# Chrome options required to prevent timeout, not sure why though.
 options = Options()
 options.add_argument('--headless')
 options.add_argument('--window-size=1920x1080')
@@ -36,9 +38,7 @@ driver.implicitly_wait(10)
 
 # URL for the live train camera feed. This is Jefferson Parish, LA - Central Ave. 
 url = "https://g1.ipcamlive.com/player/player.php?alias=63609c3400e64&autoplay=1" 
-screenshot_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Screenshots")
-if not os.path.exists(screenshot_dir):
-    os.makedirs(screenshot_dir)
+
 positive_screenshot_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "TrainingScreenshots")
 if not os.path.exists(positive_screenshot_dir):
     os.makedirs(positive_screenshot_dir)
@@ -89,11 +89,10 @@ def analyze_screenshot(screenshot, filename):
     print("Not a match. Moving on...")
     return False, probability
 
-
 def log_train_data(date, current_time, length):
     print("Logging Train Data...")
     filename = "TrainData.csv"
-    header = ["Date", "Time", "Length of Time Logged"]
+    header = ["Date", "Time", "Length of Time Logged (min.)"]
     file_exists = os.path.isfile(filename)
     with open(filename, "a") as f:
         writer = csv.writer(f)
@@ -116,6 +115,20 @@ def update_image(image):
 train_start_time = None
 train_logged = False
 
+def send_text_message(subject, body):
+    # Global variables for these must be set:
+    email_address = os.environ['EMAIL_ADDRESS']
+    email_password = os.environ['EMAIL_PASSWORD']
+    recipient_phone_number = os.environ['RECIPIENT_PHONE_NUMBER']
+    carrier_gateway_address = 'txt.att.net'
+    recipient_address = f'{recipient_phone_number}@{carrier_gateway_address}'
+    message = f'Subject: {subject}\n\n{body}'
+    with smtplib.SMTP('smtp.office365.com', 587) as server:
+        server.starttls()
+        server.login(email_address, email_password)
+        server.sendmail(email_address, recipient_address, message)
+    print('Sent text message')
+
 while True:
     driver.get(url)
     time.sleep(10)
@@ -128,7 +141,9 @@ while True:
     train_present, probability = analyze_screenshot(image, timestamp)
     
     if train_present:
-        cv2.imwrite(f'{positive_screenshot_dir}/{timestamp}.jpg', open_cv_image)
+        cv2.imwrite(f'{positive_screenshot_dir}/{timestamp}.jpg', open_cv_image) # Comment to stop saving screenshots
+        if 'EMAIL_ADDRESS' in os.environ and 'EMAIL_PASSWORD' in os.environ and 'RECIPIENT_PHONE_NUMBER' in os.environ:
+            send_text_message('Train Alert', 'A train has been detected on the tracks.')
         if train_start_time is None:
             train_start_time = datetime.now()
             if not train_logged:
@@ -137,10 +152,10 @@ while True:
                 log_train_data(date, current_time, 'NA()')
                 train_logged = True
     else:
-        cv2.imwrite(f'{negative_screenshot_dir}/{timestamp}.jpg', open_cv_image)
+        cv2.imwrite(f'{negative_screenshot_dir}/{timestamp}.jpg', open_cv_image) # Comment to stop saving screenshots
         if train_start_time is not None:
             train_end_time = datetime.now()
-            train_duration = (train_end_time - train_start_time).total_seconds()
+            train_duration = ((train_end_time - train_start_time)/60).total_seconds()
             date = train_start_time.strftime("%Y-%m-%d")
             current_time = train_end_time.strftime("%H:%M:%S")
             log_train_data(date, current_time, train_duration)
@@ -154,10 +169,12 @@ while True:
     text_offset_x = 10
     text_offset_y = open_cv_image.shape[0] - 10
     
+    # Uncomment to add a text box of the probabilities to the screenshots    
 #   box_coords = ((text_offset_x, text_offset_y), (text_offset_x + text_width + 10, text_offset_y - text_height - 10))
 #   cv2.rectangle(open_cv_image, box_coords[0], box_coords[1], (255, 255, 255), cv2.FILLED)
 #   cv2.putText(open_cv_image, text, (text_offset_x + 5, text_offset_y - 5), font, font_scale, (0, 0, 0), 2)
 
+    # Comment out these 8 lines to stop showing screenshots.
     new_width = 600
     original_width, original_height = image.size
     aspect_ratio = original_height / original_width
@@ -166,4 +183,6 @@ while True:
     update_image(image)
     root.update_idletasks()
     root.update()
-    time.sleep(60)
+    
+    
+    time.sleep(screenshot_frequency)
