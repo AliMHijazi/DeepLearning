@@ -1,7 +1,6 @@
-# Program to monitor a live feed of a train camera and alert when a train is on the
-# tracks. Ultimately want to send a message, text, email, or something between certain times.
-# This currently creates a folder for screenshots and saves them based on its prediction about whether a  
-# train is present in the image. Set to take a screenshot every 1 minute. 
+# Program to monitor a live feed of a train camera and alert when a train is on the tracks.
+# Has on/off functionality for sending texts, saving screenshots, showing screenshots, 
+# including the url in the text, including the prediction on the screenshots.
 
 import os
 import smtplib
@@ -23,9 +22,8 @@ from torchvision import transforms
 from DatasetTrainer import MyModel
 
 print("Initializing...")
-screenshot_frequency = 60
 
-# Chrome options required to prevent timeout, not sure why though.
+# Chrome options required to prevent timeout.
 options = Options()
 options.add_argument('--headless')
 options.add_argument('--window-size=1920x1080')
@@ -39,13 +37,13 @@ driver.implicitly_wait(10)
 # URL for the live train camera feed. This is Jefferson Parish, LA - Central Ave. 
 url = "https://g1.ipcamlive.com/player/player.php?alias=63609c3400e64&autoplay=1" 
 
-# Set size of screenshot display menu:        
-window_x = 1500
+window_x = 1500 # Set size of screenshot display menu.    
 window_y = 700
-
+screenshot_frequency = 60 # Seconds
+send_texts = 0 # Set to 1 and save env. variables to send texts.
 save_screenshots = 1 # Set to 1 to save screenshots.
 show_screenshots = 1 # Set to 1 to show screenshots.
-include_url = 0 # Set to 1 to include the url in the text.
+include_url = 0 # Set to 1 to include the url in the text message.
 include_prediction = 0 # Set to 1 to include probabilities and predictions on screenshots.
 
 # Set the screenshot save folder:
@@ -55,19 +53,14 @@ if not os.path.exists(positive_screenshot_dir):
 negative_screenshot_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "TrainingScreenshotsNegative")
 if not os.path.exists(negative_screenshot_dir):
     os.makedirs(negative_screenshot_dir)
-
 root = tk.Tk()
 root.geometry(f'+{window_x}+{window_y}')
 label = tk.Label(root)
 label.pack()
-train_start_time = None
-train_logged = False
-train_detected = False
-
+shutdown_flag = False
 model = MyModel(num_classes=2)
 model.load_state_dict(torch.load('TrainedModel.pth'))
 model.eval()
-
 transform = transforms.Compose([
     transforms.Resize(256),
     transforms.CenterCrop(224),
@@ -93,17 +86,13 @@ def analyze_screenshot(screenshot, filename):
         else:
             print(f'Train Not Present - Probability of Prediction: {probability * 100:.2f}%')
     if presence_prediction.item() == 0:
-        print("Match! Train being logged...")
         date = datetime.now().strftime("%Y-%m-%d")
         current_time = datetime.now().strftime("%H:%M:%S")
         length = 0
         return True, probability
-    
-    print("Not a match. Moving on...")
     return False, probability
 
 def log_train_data(date, current_time, length):
-    print("Logging Train Data...")
     filename = "TrainData.csv"
     header = ["Date", "Time", "Length of Time Logged (min.)"]
     file_exists = os.path.isfile(filename)
@@ -119,46 +108,95 @@ def update_image(image):
     label.image = photo
 
 def send_text_message(subject, body, train_duration=None, url=None):
+    # Set the following as environmental variables for text messaging.
     email_address = os.environ['EMAIL_ADDRESS']
     email_password = os.environ['EMAIL_PASSWORD']
     recipient_phone_number = os.environ['RECIPIENT_PHONE_NUMBER']
-    carrier_gateway_address = 'txt.att.net'
+    carrier_gateway_address = 'txt.att.net' # Change accordingly.
     recipient_address = f'{recipient_phone_number}@{carrier_gateway_address}'
-    
+
+    # Still plan to use train duration for something. Just not sure where.     
     if train_duration:
         body += f'\n\nTrain has been present for {current_train_duration:.2f} minutes.'
     if include_url == 1:
         body += f'\n\n{url}'
-    
     message = f'Subject: {subject}\n\n{body}'
-    
-    with smtplib.SMTP('smtp.office365.com', 587) as server:
+    with smtplib.SMTP('smtp.office365.com', 587) as server: # Change accordingly.
         server.starttls()
         server.login(email_address, email_password)
         server.sendmail(email_address, recipient_address, message)
-    
     print('Sent text message')
+    
+def shutdown():
+    global shutdown_flag
+    shutdown_flag = True
+    print('Shutting Down...')
+    driver.close()
+    root.destroy()
 
-while True:
-    driver.get(url)
-    time.sleep(10)
+shutdown_button = tk.Button(root, text="Shutdown", command=shutdown)
+shutdown_button.pack()
+
+def on_key_press(event):
+    print(f'Key pressed: {event.char}')
+    if event.char == 'q':
+        global shutdown_flag
+        shutdown_flag = True
+        print('Q pressed')
+        driver.close()
+        root.destroy()
+
+driver.get(url)
+root.bind('<Key>', on_key_press)
+def update():
+    text = ""
+    screenshot_buffer = 15 # Adjust up if screenshots are still loading.
+    load_start_time = datetime.now()
+    train_start_time = None
+    train_logged = False
+    train_detected = False
+    driver.refresh()
+    time.sleep(screenshot_buffer)
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 2.5
+    text_thickness = 2
     screenshot = driver.get_screenshot_as_png()
     image = Image.open(io.BytesIO(screenshot))
     open_cv_image = np.array(image.convert('RGB'))
     open_cv_image = cv2.cvtColor(open_cv_image, cv2.COLOR_RGB2BGR)
     current_time = datetime.now()
     current_train_duration = None
-
     if train_start_time:
         current_train_duration = ((current_time - train_start_time) / 60).total_seconds()
     timestamp = current_time.strftime("%Y%m%d-%H%M%S")
+    root.title(f'Screenshot: {timestamp}')
     train_present, probability = analyze_screenshot(image, timestamp)
     
+    if include_prediction == 1:
+        if train_present:
+            text = f'Train Detected - Probability: {probability * 100:.2f}%'
+        else:
+            text = f'No Train - Probability: {probability * 100:.2f}%'
+        (text_width, text_height) = cv2.getTextSize(text, font, fontScale=font_scale, thickness=text_thickness)[0]
+        text_offset_x = 10
+        text_offset_y = open_cv_image.shape[0] - 10
+        box_coords = ((text_offset_x, text_offset_y), (text_offset_x + text_width + 10, text_offset_y - text_height - 10))
+        cv2.rectangle(open_cv_image, box_coords[0], box_coords[1], (255, 255, 255), cv2.FILLED)
+        cv2.putText(open_cv_image, text, (text_offset_x + 5, text_offset_y - 5), font, font_scale, (0, 0, 0), 2)
+
     if train_present:
         if save_screenshots == 1:
             cv2.imwrite(f'{positive_screenshot_dir}/{timestamp}.jpg', open_cv_image)
+            new_width = 600
+            original_width, original_height = image.size
+            aspect_ratio = original_height / original_width
+            new_height = int(new_width * aspect_ratio)
+            image = image.resize((new_width, new_height))
+            update_image(image)
+            root.update_idletasks()
+            root.update()
         if not train_detected:
-            if 'EMAIL_ADDRESS' in os.environ and 'EMAIL_PASSWORD' in os.environ and 'RECIPIENT_PHONE_NUMBER' in os.environ:
+            if 'EMAIL_ADDRESS' in os.environ and 'EMAIL_PASSWORD' in os.environ and 'RECIPIENT_PHONE_NUMBER' in os.environ and send_texts==1:
                 send_text_message('Train Alert', 'Train Alert', current_train_duration, url)
             train_detected = True
         if train_start_time is None:
@@ -166,43 +204,33 @@ while True:
             if not train_logged:
                 date = train_start_time.strftime("%Y-%m-%d")
                 current_time_str = train_start_time.strftime("%H:%M:%S")
+                print("Logging train start time...")
                 log_train_data(date, current_time_str, 'NA()')
-                train_logged = True
+                train_logged = True  
     else:
         if save_screenshots == 1:
+            new_width = 600
+            original_width, original_height = image.size
+            aspect_ratio = original_height / original_width
+            new_height = int(new_width * aspect_ratio)
+            image = image.resize((new_width, new_height))
+            update_image(image)
+            root.update_idletasks()
+            root.update()
             cv2.imwrite(f'{negative_screenshot_dir}/{timestamp}.jpg', open_cv_image)
         if train_start_time is not None:
             train_end_time = current_time
             train_duration = ((train_end_time - train_start_time) / 60).total_seconds()
             date = train_start_time.strftime("%Y-%m-%d")
             current_time_str = train_end_time.strftime("%H:%M:%S")
+            print("Logging train end time...")
             log_train_data(date, current_time_str, train_duration)
             train_start_time = None
             train_logged = False
         train_detected = False
-
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    font_scale = 2.5
-    text = f'Probability: {probability * 100:.2f}%'
-    (text_width, text_height) = cv2.getTextSize(text, font, fontScale=font_scale, thickness=2)[0]
-    text_offset_x = 10
-    text_offset_y = open_cv_image.shape[0] - 10
-    
-    if include_prediction == 1:
-        box_coords = ((text_offset_x, text_offset_y), (text_offset_x + text_width + 10, text_offset_y - text_height - 10))
-        cv2.rectangle(open_cv_image, box_coords[0], box_coords[1], (255, 255, 255), cv2.FILLED)
-        cv2.putText(open_cv_image, text, (text_offset_x + 5, text_offset_y - 5), font, font_scale, (0, 0, 0), 2)
-
-    # Comment out these 8 lines to stop showing screenshots.
-    if save_screenshots == 1:
-        new_width = 600
-        original_width, original_height = image.size
-        aspect_ratio = original_height / original_width
-        new_height = int(new_width * aspect_ratio)
-        image = image.resize((new_width, new_height))
-        update_image(image)
-        root.update_idletasks()
-        root.update()
-
-time.sleep(screenshot_frequency)
-
+    load_end_time = datetime.now()
+    load_time = load_end_time - load_start_time
+    if not shutdown_flag:
+        root.after((screenshot_frequency - int(load_time.total_seconds())) * 1000, update)
+update()
+root.mainloop()
