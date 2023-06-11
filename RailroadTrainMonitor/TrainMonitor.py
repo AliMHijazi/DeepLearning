@@ -1,4 +1,5 @@
 # Program to monitor a live feed of a train camera and alert when a train is on the tracks.
+# Requires a trained model named TrainedModel.pth in the folder with the program. 
 # Has on/off functionality for sending texts, saving screenshots, showing screenshots, 
 # including the url in the text, and including the prediction on the screenshots.
 # Text functionality requires that the config.ini file be set with the user's email and phone info. 
