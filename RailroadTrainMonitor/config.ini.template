@@ -1,0 +1,4 @@
+[DEFAULT]
+Email_Address = your_email
+Email_Password = your_email_password
+Recipient_Phone_Number = your_phone_number
