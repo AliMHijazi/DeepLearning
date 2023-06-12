@@ -47,10 +47,10 @@ window_x = 1500 # Set size of screenshot display menu.
 window_y = 700
 screenshot_frequency = 60 # Seconds
 send_texts = 1 # Set to 1 and save env. variables to send texts.
-save_screenshots = 1 # Set to 1 to save screenshots.
+save_screenshots = 0 # Set to 1 to save screenshots.
 show_screenshots = 0 # Set to 1 to show screenshots.
-include_url = 0 # Set to 1 to include the url in the text message.
-include_prediction = 1 # Set to 1 to include probabilities and predictions on screenshots.
+include_url = 1 # Set to 1 to include the url in the text message.
+include_prediction = 0 # Set to 1 to include probabilities and predictions on screenshots.
 script_dir = os.path.dirname(os.path.abspath(__file__))
 model_path = os.path.join(script_dir, 'TrainedModel.pth')
 
@@ -61,7 +61,6 @@ email_password = config['DEFAULT']['Email_Password']
 recipient_phone_number = config['DEFAULT']['Recipient_Phone_Number']
 
 print(f"Email address: {email_address}")
-
 print(f"Recipient phone number: {recipient_phone_number}")
 
 # Set the screenshot save folder:
@@ -145,10 +144,10 @@ def update_image(image):
         label.image = photo
     else:
         photo = None
+        
 def send_text_message(subject, body, email_address, email_password, recipient_phone_number, train_duration=None, url=None):
     carrier_gateway_address = 'txt.att.net' # Change accordingly.
     recipient_address = f'{recipient_phone_number}@{carrier_gateway_address}'
-
     # Still plan to use train duration for something. Just not sure where.     
     if train_duration:
         body += f'\n\nTrain has been present for {current_train_duration:.2f} minutes.'

@@ -4,7 +4,6 @@ RailroadTrainMonitor/TrainingImagesCurated
 RailroadTrainMonitor/TrainingImagesFull
 RailroadTrainMonitor/TrainingImagesNegative
 RailroadTrainMonitor/TrainingImagesNegativeUnannotated
-RailroadTrainMonitor/Screenshots
 RailroadTrainMonitor/__pycache__
 RailroadTrainMonitor/Backups
 RailroadTrainMonitor/TrainingAnnotations.csv
@@ -20,6 +19,7 @@ RailroadTrainMonitor/TrainData.csv
 RailroadTrainMonitor/TrainingScreenshots
 RailroadTrainMonitor/TrainingScreenshotsNegative
 RailroadTrainMonitor/config.ini
+RailroadTrainMonitor/*.log
 
 OpenImagesDownloadScripts/class-descriptions.csv
 OpenImagesDownloadScripts/Downloader.py
@@ -35,3 +35,5 @@ OpenImagesDownloadScripts/TrainingAnnotations.csv
 OpenImagesDownloadScripts/TestingAnnotations.csv
 OpenImagesDownloadScripts/TrainingAnnotationsNegative.csv
 
+StockPredictor/*.csv
+StockPredictor/*.pth
